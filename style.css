@@ -1,0 +1,8 @@
+.center {
+	text-align: center;
+}
+
+#animation_canvas {
+	width: 650px;
+	height: 480px;
+}
