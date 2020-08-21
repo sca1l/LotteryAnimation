@@ -43,6 +43,9 @@ function process(){
   }
   
   if(status == STATUS_DETERMINE && check_all_reels_stoped()){
+    for(let i=0; i<reel_positions.length; i++){
+      reel_positions[i] = reel_stop_positions[i]%REEL_COLUMN_LENGTH;
+    }
     status = STATUS_SHOW_RESULT;
   }
   
@@ -61,7 +64,13 @@ function check_all_reels_stoped(){
 
 function rotate_reel(){
   for(let i=0; i<reel_positions.length; i++){
-    if(status == STATUS_ROTATING || status == STATUS_DETERMINE){
+    if(status == STATUS_ROTATING){
+      if(reel_positions[i] < reel_stop_positions[i]){
+        reel_stop_positions[i] -= FRAME_INTERVAL * REEL_SPEED / 1000.0;
+      }else{
+        reel_positions[i] += FRAME_INTERVAL * REEL_SPEED / 1000.0;
+      }
+    }else if(status == STATUS_DETERMINE){
       if(reel_positions[i] < reel_stop_positions[i]){
         reel_positions[i] += FRAME_INTERVAL * REEL_SPEED / 1000.0;
       }else{
@@ -73,16 +82,6 @@ function rotate_reel(){
     }
   }
 }
-
-function determine_reel(row1_position, row2_position, row3_position){
-  reel_stop_positions[0] = row1_position + REEL_COLUMN_LENGTH*3;
-  reel_stop_positions[1] = row2_position + REEL_COLUMN_LENGTH*6;
-  reel_stop_positions[2] = row3_position + REEL_COLUMN_LENGTH*9;
-  
-  status = STATUS_DETERMINE;
-}
-
-
 
 function draw_reel(row, column){
   column %= REEL_COLUMN_LENGTH;
@@ -111,6 +110,30 @@ function get_reel_y(column){
   frame_center_y = frame_img.height/2;
   reel_center_y = REEL_WIDTH/2;
   return frame_center_y - reel_center_y - REEL_WIDTH*column;
+}
+
+function start_rotate(){
+  if(status == STATUS_BEFORE_START || status == STATUS_SHOW_RESULT){
+    for(let i=0; i<reel_positions.length; i++){
+      reel_stop_positions[i] %= REEL_COLUMN_LENGTH;
+    }
+    status = STATUS_ROTATING;
+  }
+}
+
+function determine_reel(row1_position, row2_position, row3_position){
+  if(status != STATUS_ROTATING){
+    return;
+  }
+  
+  for(let i=0; i<reel_positions.length; i++){
+    reel_positions[i] %= REEL_COLUMN_LENGTH;
+  }
+  reel_stop_positions[0] = row1_position + REEL_COLUMN_LENGTH*3;
+  reel_stop_positions[1] = row2_position + REEL_COLUMN_LENGTH*6;
+  reel_stop_positions[2] = row3_position + REEL_COLUMN_LENGTH*9;
+  
+  status = STATUS_DETERMINE;
 }
 
 
