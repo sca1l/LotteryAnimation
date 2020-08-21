@@ -1,15 +1,23 @@
 var canvas,ctx;
-var frame_img = new Image();
-var reel_img = new Image();
+let frame_img = new Image();
+let reel_img = new Image();
 
-var status = 0;
-var time = 0;
+const STATUS_BEFORE_START = 0;
+const STATUS_ROTATING = 1;
+const STATUS_DETERMINE = 2;
+const STATUS_SHOW_RESULT = 9; 
+let status = STATUS_BEFORE_START;
 
+const FRAME_INTERVAL = 25;
 const LEFT_REEL_OFFSET_X = 55;
-const REEL_SIZE = 160; //ƒŠ[ƒ‹‚Ì•‚ÌƒTƒCƒYicˆêŒÂ•ª‚Æ“¯‚¶		j
+const REEL_WIDTH = 160; //ãƒªãƒ¼ãƒ«ã®å¹…ã®ã‚µã‚¤ã‚ºï¼ˆç¸¦ä¸€å€‹åˆ†ã¨åŒã˜ï¼‰
 const REEL_INTERVAL = 30;
-
 const REEL_COLUMN_LENGTH = 4;
+
+const REEL_SPEED = 12.0; //ä¸€ç§’é–“ã®å›è»¢æ•°ï¼ˆã‚ã¾ã‚Šæ­£ç¢ºã§ã¯ãªã„ï¼‰
+
+var reel_positions = [0, 0, 0];
+var reel_stop_positions = [REEL_COLUMN_LENGTH, REEL_COLUMN_LENGTH, REEL_COLUMN_LENGTH];
 
 
 function init(){
@@ -19,26 +27,62 @@ function init(){
   frame_img.src = "./img/frame.png"
   reel_img.src = "./img/reel.png"
   
-  console.log("init");
-  
   canvas.height = 360;
   canvas.width = 650;
   
-  interval = setInterval(process, 25);
+  interval = setInterval(process, FRAME_INTERVAL);
 }
 
 function process(){
-  //ˆê—ñ–Ú
-  draw_reel(0, time*0.3);
-  //“ñ—ñ–Ú
-  draw_reel(1, time*0.3 + 1);
-  //O—ñ–Ú
-  draw_reel(2, time*0.3 + 2);
+  //ãƒªãƒ¼ãƒ«ã®å›è»¢
+  rotate_reel();
   
-  time++;
+  //ãƒªãƒ¼ãƒ«ã®æç”»
+  for(let i=0; i<reel_positions.length; i++){
+    draw_reel(i, reel_positions[i]);
+  }
   
+  if(status == STATUS_DETERMINE && check_all_reels_stoped()){
+    status = STATUS_SHOW_RESULT;
+  }
+  
+  //æ ã®æç”»
   ctx.drawImage(frame_img, 0, 0, frame_img.width, frame_img.height);
 }
+
+function check_all_reels_stoped(){
+  for(let i=0; i<reel_positions.length; i++){
+    if(reel_positions[i] < reel_stop_positions[i]){
+      return false;
+    }
+  }
+  return true;
+}
+
+function rotate_reel(){
+  for(let i=0; i<reel_positions.length; i++){
+    if(status == STATUS_ROTATING || status == STATUS_DETERMINE){
+      if(reel_positions[i] < reel_stop_positions[i]){
+        reel_positions[i] += FRAME_INTERVAL * REEL_SPEED / 1000.0;
+      }else{
+        reel_positions[i] = reel_stop_positions[i];
+      }
+    }
+    if(status == STATUS_ROTATING){
+      reel_positions[i] %= REEL_COLUMN_LENGTH;
+    }
+  }
+}
+
+function determine_reel(row1_position, row2_position, row3_position){
+  reel_stop_positions[0] = row1_position + REEL_COLUMN_LENGTH*3;
+  reel_stop_positions[1] = row2_position + REEL_COLUMN_LENGTH*6;
+  reel_stop_positions[2] = row3_position + REEL_COLUMN_LENGTH*9;
+  
+  status = STATUS_DETERMINE;
+}
+
+
 
 function draw_reel(row, column){
   column %= REEL_COLUMN_LENGTH;
@@ -46,12 +90,12 @@ function draw_reel(row, column){
   reel_x = get_reel_x(row);
   reel_y = get_reel_y(column);
   
-  if(column < 1){
-    //ã‚ª‚¿‚å‚ñØ‚ê‚é‚Ì‚Å‚à‚¤ˆêŒÂã‚ÉŒp‚¬‘«‚µ
-    upside_reel_y = get_reel_y(column - REEL_COLUMN_LENGTH);
+  if(column <= 1){
+    //ä¸ŠãŒã¡ã‚‡ã‚“åˆ‡ã‚Œã‚‹ã®ã§ã‚‚ã†ä¸€å€‹ä¸Šã«ç¶™ãè¶³ã—
+    upside_reel_y = get_reel_y(column + REEL_COLUMN_LENGTH);
     ctx.drawImage(reel_img, reel_x, upside_reel_y, reel_img.width, reel_img.height);
   }else if(column > REEL_COLUMN_LENGTH-2){
-    //‰º‚ª‚¿‚å‚ñØ‚ê‚é‚Ì‚Å‚à‚¤ˆêŒÂ‰º‚ÉŒp‚¬‘«‚µ
+    //ä¸‹ãŒã¡ã‚‡ã‚“åˆ‡ã‚Œã‚‹ã®ã§ã‚‚ã†ä¸€å€‹ä¸‹ã«ç¶™ãè¶³ã—
     downside_reel_y = get_reel_y(column - REEL_COLUMN_LENGTH);
     ctx.drawImage(reel_img, reel_x, downside_reel_y, reel_img.width, reel_img.height);
   }
@@ -59,21 +103,14 @@ function draw_reel(row, column){
 }
 
 function get_reel_x(row){
-  //ˆê—ñ–Ú‚Í55A“ñ—ñ–Ú‚Í245AO—ñ–Ú‚Í335n‚Ü‚è
-  return LEFT_REEL_OFFSET_X + (REEL_SIZE + REEL_INTERVAL)*row;
+  //ä¸€åˆ—ç›®ã¯55ã€äºŒåˆ—ç›®ã¯245ã€ä¸‰åˆ—ç›®ã¯335å§‹ã¾ã‚Š
+  return LEFT_REEL_OFFSET_X + (REEL_WIDTH + REEL_INTERVAL)*row;
 }
 
 function get_reel_y(column){
-  column = column % REEL_COLUMN_LENGTH;
   frame_center_y = frame_img.height/2;
-  reel_center_y = REEL_SIZE/2;
-  return frame_center_y - reel_center_y - REEL_SIZE*column;
-}
-
-
-
-function push_button(){
-  
+  reel_center_y = REEL_WIDTH/2;
+  return frame_center_y - reel_center_y - REEL_WIDTH*column;
 }
 
 
