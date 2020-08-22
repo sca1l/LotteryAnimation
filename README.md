@@ -4,7 +4,7 @@ JavaScriptのcanvasを使ってアニメーションさせています。
 
 
 
-
+![](https://sca1l.github.io/LotteryAnimation/img/ss.png)
 
 
 
